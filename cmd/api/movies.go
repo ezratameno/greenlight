@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/ezratameno/greenlight/internal/data"
 )
 
 // Add a createMovieHandler for the "POST /v1/movies" endpoint. For now we simply
@@ -18,9 +21,29 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		// Use the new notFoundResponse() helper
+		app.notFoundResponse(w, r)
 		return
 	}
-	// Otherwise, interpolate the movie ID in a placeholder response.
-	fmt.Fprintf(w, "show the details of movie %d\n", id)
+
+	// Create a new instance of the Movie struct, containing the ID we extracted from
+	// the URL and some dummy data. Also notice that we deliberately haven't set a
+	// value for the Year field.
+	movie := data.Movie{
+		ID:        id,
+		CreatedAt: time.Now(),
+		Title:     "Casablanca",
+		Runtime:   102,
+		Genres:    []string{"drama", "romance", "war"},
+		Version:   1,
+	}
+
+	// Create an envelope{"movie": movie} instance and pass it to writeJSON(), instead
+	// of passing the plain movie struct.
+	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
+	if err != nil {
+		// Use the new serverErrorResponse() helper.
+		app.serverErrorResponse(w, r, err)
+	}
+
 }
